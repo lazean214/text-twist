@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Text Twist maskable icon">
+  <defs>
+    <linearGradient id="bgm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bgm)"/>
+  <g transform="translate(256 256) scale(0.86)">
+    <circle cx="0" cy="0" r="165" fill="#0b1120" stroke="#60a5fa" stroke-width="14"/>
+    <g fill="url(#cm)">
+      <circle cx="-106" cy="-42" r="50"/>
+      <circle cx="0" cy="-108" r="50"/>
+      <circle cx="106" cy="-42" r="50"/>
+      <circle cx="64" cy="90" r="50"/>
+      <circle cx="-64" cy="90" r="50"/>
+    </g>
+    <g fill="#111827" font-family="Arial, sans-serif" font-size="44" font-weight="700" text-anchor="middle" dominant-baseline="central">
+      <text x="-106" y="-42">T</text>
+      <text x="0" y="-108">W</text>
+      <text x="106" y="-42">I</text>
+      <text x="64" y="90">S</text>
+      <text x="-64" y="90">T</text>
+    </g>
+  </g>
+</svg>

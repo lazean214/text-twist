@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Text Twist icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="coin" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#d97706"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g transform="translate(256 256)">
+    <circle cx="0" cy="0" r="150" fill="#0b1120" stroke="#60a5fa" stroke-width="12"/>
+    <g fill="url(#coin)">
+      <circle cx="-96" cy="-38" r="46"/>
+      <circle cx="0" cy="-98" r="46"/>
+      <circle cx="96" cy="-38" r="46"/>
+      <circle cx="58" cy="82" r="46"/>
+      <circle cx="-58" cy="82" r="46"/>
+    </g>
+    <g fill="#111827" font-family="Arial, sans-serif" font-size="40" font-weight="700" text-anchor="middle" dominant-baseline="central">
+      <text x="-96" y="-38">T</text>
+      <text x="0" y="-98">W</text>
+      <text x="96" y="-38">I</text>
+      <text x="58" y="82">S</text>
+      <text x="-58" y="82">T</text>
+    </g>
+  </g>
+</svg>
