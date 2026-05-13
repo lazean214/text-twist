@@ -603,6 +603,19 @@ function App() {
             </button>
           </div>
         </section>
+
+        <footer className="app-footer">
+          <p>
+            Copyright 
+            <a
+              href="https://naicatech.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              naicatech.com
+            </a>
+          </p>
+        </footer>
       </main>
 
       {modalOpen ? (
