@@ -1,6 +1,32 @@
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import Leaderboard from './components/Leaderboard'
+import PlayerPicker from './components/PlayerPicker'
+import SplashScreen from './components/SplashScreen'
 import roundsData from './data/rounds.json'
+import dictionaryRaw from '../google-10000-english.txt?raw'
+import {
+  createProfile,
+  findProfileByName,
+  getActiveProfile,
+  getLeaderboard,
+  hasProfiles,
+  isProfileStoreCorrupted,
+  listProfiles,
+  resetProfileStore,
+  setActiveProfile,
+  updateProfile,
+} from './services/profileStorage'
+import type {
+  LeaderboardMetric,
+  PlayerProfile,
+} from './types/player'
 import './App.css'
 
 type Difficulty = 'simple' | 'hard' | 'hardest'
@@ -21,11 +47,50 @@ type RoundSource = {
 
 const ROUND_TIME_SECONDS = 120
 const MAX_LEVELS = 100
+const GENERATED_ROUND_TARGET = 900
 const SUBWORD_LIMITS: Record<Difficulty, number> = {
   simple: 15,
   hard: 20,
   hardest: 30,
 }
+
+const BLOCKED_WORDS = new Set([
+  'ANAL',
+  'ASS',
+  'BABES',
+  'BEASTIALITY',
+  'BLOWJOB',
+  'BLOWJOBS',
+  'BOOBS',
+  'COCK',
+  'CUM',
+  'DICK',
+  'DILDO',
+  'FUCK',
+  'FUCKING',
+  'GAY',
+  'HARDCORE',
+  'HENTAI',
+  'INCEST',
+  'LESBIAN',
+  'LESBIANS',
+  'MILF',
+  'MILFS',
+  'NAKED',
+  'NUDE',
+  'PENIS',
+  'PORN',
+  'PORNO',
+  'PUSSY',
+  'RAPE',
+  'SEXCAM',
+  'SEXY',
+  'SHEMALE',
+  'SLUT',
+  'TITS',
+  'VOYEUR',
+  'XXX',
+])
 
 function sortByLengthThenAlpha(words: string[]) {
   return [...words].sort((a, b) => {
@@ -48,9 +113,131 @@ function shuffleLetters(letters: string[]) {
   return cloned
 }
 
+function buildLetterMap(word: string) {
+  const map = new Map<string, number>()
+
+  for (const char of word) {
+    map.set(char, (map.get(char) ?? 0) + 1)
+  }
+
+  return map
+}
+
+function canBuildFromLetters(word: string, source: string) {
+  const sourceMap = buildLetterMap(source)
+
+  for (const char of word) {
+    const remaining = sourceMap.get(char) ?? 0
+
+    if (remaining === 0) {
+      return false
+    }
+
+    sourceMap.set(char, remaining - 1)
+  }
+
+  return true
+}
+
+function pickDifficultyByLength(length: number): Difficulty {
+  if (length <= 6) {
+    return 'simple'
+  }
+
+  if (length === 7) {
+    return 'hard'
+  }
+
+  return 'hardest'
+}
+
+function normalizeSubWords(subWords: string[], bingo: string) {
+  return sortByLengthThenAlpha(
+    Array.from(
+      new Set(
+        subWords.filter(
+          (word) =>
+            /^[A-Z]{3,5}$/.test(word) &&
+            word !== bingo &&
+            !BLOCKED_WORDS.has(word),
+        ),
+      ),
+    ),
+  )
+}
+
+function toRound(
+  bingo: string,
+  difficulty: Difficulty,
+  words: string[],
+): Round {
+  const sub = normalizeSubWords(words, bingo).slice(
+    0,
+    SUBWORD_LIMITS[difficulty],
+  )
+
+  return {
+    bingo,
+    difficulty,
+    sub,
+    valid: new Set<string>([...sub, bingo]),
+  }
+}
+
+function createGeneratedRounds(existingBingos: Set<string>) {
+  const dictionary = Array.from(
+    new Set(
+      dictionaryRaw
+        .split(/\r?\n/)
+        .map((word) => word.trim().toUpperCase())
+        .filter((word) => /^[A-Z]+$/.test(word))
+        .filter((word) => !BLOCKED_WORDS.has(word)),
+    ),
+  )
+
+  const subWordDictionary = dictionary.filter(
+    (word) => word.length >= 3 && word.length <= 5,
+  )
+
+  const bingoCandidates = shuffleLetters(
+    dictionary.filter(
+      (word) => word.length >= 6 && word.length <= 8,
+    ),
+  )
+
+  const generated: Round[] = []
+
+  for (const bingo of bingoCandidates) {
+    if (generated.length >= GENERATED_ROUND_TARGET) {
+      break
+    }
+
+    if (existingBingos.has(bingo)) {
+      continue
+    }
+
+    const difficulty = pickDifficultyByLength(
+      bingo.length,
+    )
+
+    const subWords = subWordDictionary.filter(
+      (word) => canBuildFromLetters(word, bingo),
+    )
+
+    if (subWords.length < 5) {
+      continue
+    }
+
+    generated.push(toRound(bingo, difficulty, subWords))
+    existingBingos.add(bingo)
+  }
+
+  return generated
+}
+
 const ROUND_LIBRARY = (roundsData.wordPool || roundsData) as RoundSource[]
 
-const ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
+const CURATED_ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
   const bingo = round.bingo.trim().toUpperCase()
   const difficulty = round.difficulty
 
@@ -60,37 +247,53 @@ const ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
       ? round.sub
       : []
 
-  const normalized = sortByLengthThenAlpha(
-    Array.from(
-      new Set(
-        words
-          .map((word) => word.trim().toUpperCase())
-          .filter((word) => /^[A-Z]{3,5}$/.test(word) && word !== bingo),
-      ),
-    ),
-  )
-
-  const sub = normalized.slice(0, SUBWORD_LIMITS[difficulty])
-
-  const valid = new Set<string>([...sub, bingo])
-
-  return {
+  return toRound(
     bingo,
     difficulty,
-    sub,
-    valid,
-  }
+    words.map((word) => word.trim().toUpperCase()),
+  )
 })
+
+const GENERATED_ROUNDS = createGeneratedRounds(
+  new Set(CURATED_ROUNDS.map((round) => round.bingo)),
+)
+
+const ROUNDS: Round[] = [
+  ...CURATED_ROUNDS,
+  ...GENERATED_ROUNDS,
+]
 
 const SIMPLE_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'simple')
 const HARD_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'hard')
 const HARDEST_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'hardest')
 
 type ModalAction = 'next' | 'retry' | 'restart' | null
+type AppView =
+  | 'splash'
+  | 'new-game'
+  | 'continue'
+  | 'leaderboard'
+  | 'game'
 
 function App() {
+  const [view, setView] = useState<AppView>('splash')
+  const [profiles, setProfiles] = useState<PlayerProfile[]>([])
+  const [activeProfile, setActiveProfileState] =
+    useState<PlayerProfile | null>(null)
+  const [newPlayerName, setNewPlayerName] = useState('')
+  const [newPlayerError, setNewPlayerError] = useState('')
+  const [duplicateProfile, setDuplicateProfile] =
+    useState<PlayerProfile | null>(null)
+  const [leaderboardMetric, setLeaderboardMetric] =
+    useState<LeaderboardMetric>('total')
+
   const [currentLevel, setCurrentLevel] = useState(0)
   const [totalScore, setTotalScore] = useState(0)
+  const [bestSingleRound, setBestSingleRound] =
+    useState(0)
+  const [bestTimeRaceSeconds, setBestTimeRaceSeconds] =
+    useState<number | null>(null)
+  const [roundScore, setRoundScore] = useState(0)
   const [timeLeft, setTimeLeft] = useState(ROUND_TIME_SECONDS)
   const [foundWords, setFoundWords] = useState<string[]>([])
   const [currentGuess, setCurrentGuess] = useState('')
@@ -114,6 +317,10 @@ function App() {
   const [modalBody, setModalBody] = useState('')
   const [modalButton, setModalButton] = useState('CONTINUE')
   const [modalAction, setModalAction] = useState<ModalAction>(null)
+  const [canContinue, setCanContinue] = useState(false)
+  const [storageCorrupted, setStorageCorrupted] = useState(false)
+
+  const lastSavedSnapshot = useRef('')
 
   const getDifficultyPool = (level: number) => {
     if (level <= 30) return SIMPLE_ROUNDS
@@ -122,11 +329,11 @@ function App() {
   }
 
   const getRandomRound = useCallback(
-    (level: number) => {
+    (level: number, usedPool = usedWords) => {
       const pool = getDifficultyPool(level)
 
       const unused = pool.filter(
-        (round) => !usedWords.includes(round.bingo),
+        (round) => !usedPool.includes(round.bingo),
       )
 
       const source = unused.length > 0 ? unused : pool
@@ -156,6 +363,8 @@ function App() {
   }, [round])
 
   useEffect(() => {
+    // The current round should be marked as used exactly when round changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUsedWords((prev) => {
       if (prev.includes(round.bingo)) {
         return prev
@@ -169,6 +378,7 @@ function App() {
     setTimeLeft(ROUND_TIME_SECONDS)
     setFoundWords([])
     setCurrentGuess('')
+    setRoundScore(0)
     setBingoFound(false)
     setIsRoundOver(false)
     setFeedback({ text: '', tone: 'neutral' })
@@ -176,8 +386,72 @@ function App() {
   }, [round])
 
   useEffect(() => {
+    // Starting a fresh round is the intended side effect whenever source round changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     startRound()
   }, [startRound])
+
+  const refreshProfiles = useCallback(() => {
+    const nextProfiles = listProfiles()
+    setProfiles(nextProfiles)
+    setCanContinue(hasProfiles())
+    setStorageCorrupted(isProfileStoreCorrupted())
+  }, [])
+
+  const hydrateFromProfile = useCallback(
+    (profile: PlayerProfile) => {
+      setCurrentLevel(profile.currentLevel)
+      setTotalScore(profile.totalScore)
+      setUsedWords(profile.usedWords)
+      setBestSingleRound(profile.bestSingleRoundScore)
+      setBestTimeRaceSeconds(profile.bestTimeRaceSeconds)
+      setRound(getRandomRound(profile.currentLevel + 1, profile.usedWords))
+      setModalOpen(false)
+      setModalAction(null)
+      setModalBody('')
+      setModalButton('CONTINUE')
+      setModalTitle('')
+      setView('game')
+      lastSavedSnapshot.current = ''
+    },
+    [getRandomRound],
+  )
+
+  const activateProfile = useCallback(
+    (profileId: string) => {
+      const profile = setActiveProfile(profileId)
+
+      if (!profile) {
+        return
+      }
+
+      setActiveProfileState(profile)
+      hydrateFromProfile(profile)
+      refreshProfiles()
+    },
+    [hydrateFromProfile, refreshProfiles],
+  )
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshProfiles()
+
+    const initialActive = getActiveProfile()
+
+    if (initialActive) {
+      setActiveProfileState(initialActive)
+    }
+
+    const onStorage = () => {
+      refreshProfiles()
+    }
+
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [refreshProfiles])
 
   const showModal = useCallback(
     (
@@ -234,6 +508,45 @@ function App() {
   ])
 
   useEffect(() => {
+    if (!activeProfile || view !== 'game') {
+      return
+    }
+
+    const snapshot = JSON.stringify({
+      id: activeProfile.id,
+      currentLevel,
+      totalScore,
+      usedWords,
+      bestSingleRound,
+      bestTimeRaceSeconds,
+    })
+
+    if (snapshot === lastSavedSnapshot.current) {
+      return
+    }
+
+    lastSavedSnapshot.current = snapshot
+
+    updateProfile(activeProfile.id, {
+      currentLevel,
+      totalScore,
+      usedWords,
+      bestSingleRoundScore: bestSingleRound,
+      bestTimeRaceSeconds,
+      lastPlayedAt: Date.now(),
+    })
+  }, [
+    activeProfile,
+    bestSingleRound,
+    bestTimeRaceSeconds,
+    currentLevel,
+    refreshProfiles,
+    totalScore,
+    usedWords,
+    view,
+  ])
+
+  useEffect(() => {
     if (isRoundOver || modalOpen) {
       return
     }
@@ -247,6 +560,7 @@ function App() {
 
   useEffect(() => {
     if (timeLeft === 0 && !isRoundOver) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       endRound()
     }
   }, [timeLeft, isRoundOver, endRound])
@@ -336,9 +650,29 @@ function App() {
       (guess.length === round.bingo.length ? 1000 : 0)
 
     setTotalScore((prev) => prev + points)
+    setRoundScore((prev) => {
+      const next = prev + points
+      setBestSingleRound((best) =>
+        Math.max(best, next),
+      )
+      return next
+    })
 
     if (guess === round.bingo) {
       setBingoFound(true)
+
+      const elapsedSeconds = Math.max(
+        1,
+        ROUND_TIME_SECONDS - timeLeft,
+      )
+
+      setBestTimeRaceSeconds((prev) => {
+        if (prev == null) {
+          return elapsedSeconds
+        }
+
+        return Math.min(prev, elapsedSeconds)
+      })
 
       setFeedback({
         text: 'BINGO!',
@@ -358,6 +692,7 @@ function App() {
     isRoundOver,
     modalOpen,
     round,
+    timeLeft,
   ])
 
   useEffect(() => {
@@ -425,6 +760,8 @@ function App() {
     if (modalAction === 'restart') {
       setCurrentLevel(0)
       setTotalScore(0)
+      setBestSingleRound(0)
+      setBestTimeRaceSeconds(null)
       setUsedWords([])
 
       const firstRound = getRandomRound(1)
@@ -434,6 +771,85 @@ function App() {
     }
   }
 
+  const onStartNewGame = () => {
+    setNewPlayerName('')
+    setNewPlayerError('')
+    setDuplicateProfile(null)
+    setView('new-game')
+  }
+
+  const onCreateProfile = () => {
+    const normalized = newPlayerName.trim()
+
+    if (!normalized) {
+      setNewPlayerError('Please enter a player name.')
+      return
+    }
+
+    const existing = findProfileByName(normalized)
+
+    if (existing) {
+      setDuplicateProfile(existing)
+      setNewPlayerError('')
+      return
+    }
+
+    const profile = createProfile(normalized)
+    setActiveProfileState(profile)
+    refreshProfiles()
+    hydrateFromProfile(profile)
+  }
+
+  const onContinueDuplicate = () => {
+    if (!duplicateProfile) {
+      return
+    }
+
+    activateProfile(duplicateProfile.id)
+    setDuplicateProfile(null)
+  }
+
+  const onCreateDuplicateWithSuffix = () => {
+    const normalized = newPlayerName.trim()
+
+    if (!normalized) {
+      return
+    }
+
+    const profile = createProfile(normalized, true)
+    setActiveProfileState(profile)
+    setDuplicateProfile(null)
+    refreshProfiles()
+    hydrateFromProfile(profile)
+  }
+
+  const onGoToSplash = () => {
+    refreshProfiles()
+    setView('splash')
+    setModalOpen(false)
+  }
+
+  const onOpenLeaderboard = () => {
+    refreshProfiles()
+    setView('leaderboard')
+  }
+
+  const onResetCorruptedStorage = () => {
+    resetProfileStore()
+    setActiveProfileState(null)
+    setProfiles([])
+    setCanContinue(false)
+    setStorageCorrupted(false)
+    setDuplicateProfile(null)
+    setNewPlayerError('')
+    setView('splash')
+  }
+
+  const leaderboardRows = useMemo(
+    () => getLeaderboard(leaderboardMetric),
+    [leaderboardMetric],
+  )
+
   const mins = Math.floor(timeLeft / 60)
   const secs = timeLeft % 60
 
@@ -442,6 +858,135 @@ function App() {
     .padStart(2, '0')}:${secs
     .toString()
     .padStart(2, '0')}`
+
+  const bestTimeText =
+    bestTimeRaceSeconds == null
+      ? '--:--'
+      : `${Math.floor(bestTimeRaceSeconds / 60)
+          .toString()
+          .padStart(2, '0')}:${(bestTimeRaceSeconds % 60)
+          .toString()
+          .padStart(2, '0')}`
+
+  if (view === 'splash') {
+    return (
+      <div className="game-page">
+        <SplashScreen
+          onNewGame={onStartNewGame}
+          onContinue={() => setView('continue')}
+          onLeaderboard={onOpenLeaderboard}
+          onResetCorruptedStorage={onResetCorruptedStorage}
+          canContinue={canContinue}
+          storageCorrupted={storageCorrupted}
+        />
+      </div>
+    )
+  }
+
+  if (view === 'continue') {
+    return (
+      <div className="game-page">
+        <PlayerPicker
+          players={profiles}
+          onSelect={activateProfile}
+          onBack={() => setView('splash')}
+        />
+      </div>
+    )
+  }
+
+  if (view === 'leaderboard') {
+    return (
+      <div className="game-page">
+        <Leaderboard
+          rows={leaderboardRows}
+          metric={leaderboardMetric}
+          onMetricChange={setLeaderboardMetric}
+          onBack={() => setView('splash')}
+        />
+      </div>
+    )
+  }
+
+  if (view === 'new-game') {
+    return (
+      <div className="game-page">
+        <main className="menu-shell">
+          <section className="menu-card">
+            <h1>Create Player</h1>
+            <p>
+              Name your player profile. This account is
+              stored on this device.
+            </p>
+
+            <label className="name-label" htmlFor="player-name">
+              Player Name
+            </label>
+
+            <input
+              id="player-name"
+              className="name-input"
+              value={newPlayerName}
+              onChange={(event) => {
+                setNewPlayerName(event.target.value)
+                setNewPlayerError('')
+              }}
+              maxLength={24}
+              placeholder="Enter name"
+            />
+
+            {newPlayerError ? (
+              <p className="form-error">{newPlayerError}</p>
+            ) : null}
+
+            {duplicateProfile ? (
+              <div className="duplicate-card">
+                <p>
+                  "{duplicateProfile.name}" already exists.
+                  Continue this profile or create a new one
+                  with a suffix.
+                </p>
+
+                <div className="menu-actions">
+                  <button
+                    className="menu-btn"
+                    type="button"
+                    onClick={onContinueDuplicate}
+                  >
+                    Continue Existing
+                  </button>
+                  <button
+                    className="menu-btn menu-btn-primary"
+                    type="button"
+                    onClick={onCreateDuplicateWithSuffix}
+                  >
+                    Create New With Suffix
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="menu-actions">
+              <button
+                className="menu-btn menu-btn-primary"
+                type="button"
+                onClick={onCreateProfile}
+              >
+                Start Game
+              </button>
+              <button
+                className="menu-btn menu-btn-ghost"
+                type="button"
+                onClick={() => setView('splash')}
+              >
+                Back
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="game-page">
@@ -454,6 +999,10 @@ function App() {
 
             <p className="sync">
               Randomized Levels Enabled
+            </p>
+
+            <p className="active-player">
+              Player: {activeProfile?.name ?? 'Guest'}
             </p>
           </div>
 
@@ -481,6 +1030,29 @@ function App() {
                 {currentLevel + 1} / {MAX_LEVELS}
               </strong>
             </div>
+
+            <div>
+              <span>Best Time</span>
+
+              <strong>{bestTimeText}</strong>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            <button
+              type="button"
+              className="small-btn"
+              onClick={onOpenLeaderboard}
+            >
+              Leaderboard
+            </button>
+            <button
+              type="button"
+              className="small-btn"
+              onClick={onGoToSplash}
+            >
+              Save & Exit
+            </button>
           </div>
         </header>
 
@@ -514,6 +1086,8 @@ function App() {
                 Find the bingo word to unlock the
                 next level.
               </p>
+
+              <p>Round Score: {roundScore}</p>
             </div>
 
             <div
