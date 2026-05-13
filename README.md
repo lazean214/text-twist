@@ -1,73 +1,112 @@
-# React + TypeScript + Vite
+# Text Twist
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript + Vite word puzzle game inspired by Text Twist.
 
-Currently, two official plugins are available:
+## Highlights
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 100 level progression
+- Difficulty bands: simple, hard, hardest
+- Round timer and score system
+- Keyboard controls and clickable letter rack
+- PWA support with offline caching
+- JSON-driven word content
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite
+- vite-plugin-pwa
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Requirements:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 20+ recommended
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Install dependencies:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+npm install
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Start development server:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+npm run dev
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Build production bundle:
+
+npm run build
+
+Preview production build:
+
+npm run preview
+
+## Gameplay Rules
+
+- You get 2 minutes per round.
+- Submit words of length 3 and above.
+- Find the full bingo word to clear the level.
+- If time runs out without the bingo word, retry the level.
+
+Scoring:
+
+- Base: word length x 100
+- Bingo bonus: +1000 for the full bingo word
+
+## Controls
+
+- Type letters A-Z to add from the rack
+- Enter to submit
+- Backspace or Delete to remove last letter
+- Space to twist letters
+
+## Word Data Format
+
+Game data is sourced from [src/data/rounds.json](src/data/rounds.json).
+
+Current structure supports:
+
+- top-level metadata, such as totalWords and difficultyGroups
+- levels array for level-to-candidate mapping
+- wordPool array for playable words and sub-words
+
+Each wordPool item uses:
+
+- bingo: main target word
+- difficulty: simple, hard, or hardest
+- sub or subWords: accepted smaller words
+
+The app normalizes both sub and subWords for compatibility.
+
+## Level Selection Behavior
+
+- App level cap is 100.
+- The round is selected from a difficulty pool based on level range:
+  - 1 to 30: simple
+  - 31 to 70: hard
+  - 71 to 100: hardest
+- It avoids repeating already used bingo words until the pool is exhausted.
+
+## PWA and Offline
+
+The app is configured as a Progressive Web App in [vite.config.ts](vite.config.ts).
+
+Features:
+
+- Auto service worker registration and updates
+- App manifest with install metadata
+- Workbox precache for app assets
+- Offline navigation fallback to index.html
+
+After the first successful load, the app should work offline for core gameplay.
+
+## Project Files
+
+- Main game logic: [src/App.tsx](src/App.tsx)
+- Game styles: [src/App.css](src/App.css)
+- Word data: [src/data/rounds.json](src/data/rounds.json)
+- PWA config: [vite.config.ts](vite.config.ts)
+
+## Notes
+
+- If a wordPool entry has no sub/subWords, that round may feel incomplete.
+- Keep bingo words and sub-words uppercase-safe alphabetic strings for best compatibility.
