@@ -7,6 +7,7 @@
 
 .game-page {
   min-height: 100vh;
+  min-height: 100dvh;
   color: #ffffff;
   background:
     radial-gradient(circle at 12% 14%, #12315f 0%, rgba(18, 49, 95, 0) 35%),
@@ -14,12 +15,17 @@
     linear-gradient(180deg, #0f172a 0%, #020617 100%);
   font-family: 'Trebuchet MS', 'Segoe UI', Tahoma, Verdana, sans-serif;
   padding: 1.2rem;
+  padding-top: calc(1.2rem + env(safe-area-inset-top));
+  padding-right: calc(1.2rem + env(safe-area-inset-right));
+  padding-bottom: calc(1.2rem + env(safe-area-inset-bottom));
+  padding-left: calc(1.2rem + env(safe-area-inset-left));
   box-sizing: border-box;
 }
 
 .game-shell {
   max-width: 1120px;
   height: calc(100vh - 2.4rem);
+  height: calc(100dvh - 2.4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -29,6 +35,13 @@
   box-shadow: 0 24px 50px rgba(2, 6, 23, 0.6);
   background: rgba(2, 6, 23, 0.75);
   animation: shell-in 260ms ease-out;
+}
+
+@media (display-mode: standalone) {
+  .game-page {
+    padding-top: calc(0.9rem + env(safe-area-inset-top));
+    padding-bottom: calc(0.9rem + env(safe-area-inset-bottom));
+  }
 }
 
 .game-header {
@@ -399,10 +412,15 @@
 @media (max-width: 980px) {
   .game-page {
     padding: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
   }
 
   .game-shell {
     height: 100vh;
+    height: 100dvh;
     border-radius: 0;
     border: 0;
   }
@@ -426,8 +444,38 @@
 }
 
 @media (max-width: 640px) {
+  .game-header {
+    padding: 0.85rem 0.75rem;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    padding: 0.55rem;
+  }
+
+  .game-main {
+    gap: 0.7rem;
+    padding: 0.75rem;
+  }
+
   .word-matrix {
     grid-template-columns: repeat(2, minmax(90px, 1fr));
+  }
+
+  .controls {
+    padding: 0.75rem;
+  }
+
+  .button-row {
+    width: 100%;
+    gap: 0.45rem;
+  }
+
+  .btn {
+    flex: 1 1 calc(33.333% - 0.45rem);
+    min-width: 96px;
+    padding: 0.72rem 0.65rem;
   }
 
   .letter-circle {
