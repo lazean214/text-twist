@@ -7,6 +7,8 @@ type SplashScreenProps = {
   storageCorrupted: boolean
 }
 
+import { useEffect } from "react"
+
 function SplashScreen({
   onNewGame,
   onContinue,
@@ -15,6 +17,12 @@ function SplashScreen({
   canContinue,
   storageCorrupted,
 }: SplashScreenProps) {
+  useEffect(() => {
+    document.body.classList.add("splash-active")
+    return () => {
+      document.body.classList.remove("splash-active")
+    }
+  }, [])
   return (
     <main className="menu-shell">
       <section className="menu-card">
