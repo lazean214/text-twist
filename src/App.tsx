@@ -65,7 +65,7 @@ const ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
       new Set(
         words
           .map((word) => word.trim().toUpperCase())
-          .filter((word) => /^[A-Z]{3,6}$/.test(word) && word !== bingo),
+          .filter((word) => /^[A-Z]{3,5}$/.test(word) && word !== bingo),
       ),
     ),
   )
