@@ -16,11 +16,16 @@ type RoundSource = {
   bingo: string
   difficulty: Difficulty
   subWords?: string[]
-  sub?: string[]
+  sub?: string[] | number
 }
 
 const ROUND_TIME_SECONDS = 120
 const MAX_LEVELS = 100
+const SUBWORD_LIMITS: Record<Difficulty, number> = {
+  simple: 15,
+  hard: 20,
+  hardest: 30,
+}
 
 function sortByLengthThenAlpha(words: string[]) {
   return [...words].sort((a, b) => {
@@ -47,10 +52,15 @@ const ROUND_LIBRARY = (roundsData.wordPool || roundsData) as RoundSource[]
 
 const ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
   const bingo = round.bingo.trim().toUpperCase()
+  const difficulty = round.difficulty
 
-  const words = round.subWords ?? round.sub ?? []
+  const words = Array.isArray(round.subWords)
+    ? round.subWords
+    : Array.isArray(round.sub)
+      ? round.sub
+      : []
 
-  const sub = sortByLengthThenAlpha(
+  const normalized = sortByLengthThenAlpha(
     Array.from(
       new Set(
         words
@@ -60,11 +70,13 @@ const ROUNDS: Round[] = ROUND_LIBRARY.map((round) => {
     ),
   )
 
+  const sub = normalized.slice(0, SUBWORD_LIMITS[difficulty])
+
   const valid = new Set<string>([...sub, bingo])
 
   return {
     bingo,
-    difficulty: round.difficulty,
+    difficulty,
     sub,
     valid,
   }

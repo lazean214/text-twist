@@ -1,59 +1,95 @@
-﻿const fs = require("fs");
-const path = require("path");
-const dictionary = require("an-array-of-english-words");
+﻿import fs from 'fs';
+import path from 'path';
 
-const dictSet = new Set(dictionary.map(w => w.toLowerCase()));
-const roundsPath = path.join(process.cwd(), "src", "data", "rounds.json");
+const roundsPath = path.join(process.cwd(), 'src/data/rounds.json');
+const commonWordsPath = path.join(process.cwd(), 'google-10000-english.txt');
 
 if (!fs.existsSync(roundsPath)) {
-    console.error("rounds.json not found");
+    console.error('rounds.json not found');
     process.exit(1);
 }
 
-const data = JSON.parse(fs.readFileSync(roundsPath, "utf8"));
-let missingBefore = 0;
-let filledNow = 0;
-const filledBingos = [];
-
-function getSubWords(bingo) {
-    const letters = bingo.toLowerCase().split("");
-    const results = new Set();
-
-    function permute(current, remainingIndices) {
-        if (current.length >= 3 && current.length <= 6 && current.length < bingo.length) {
-            if (dictSet.has(current) && /^[a-z]+$/.test(current)) {
-                results.add(current);
-            }
-        }
-        if (current.length === 6) return;
-
-        for (let i = 0; i < remainingIndices.length; i++) {
-            const nextIdx = remainingIndices[i];
-            permute(current + letters[nextIdx], remainingIndices.filter((_, idx) => idx !== i));
-        }
-    }
-
-    permute("", letters.map((_, i) => i));
-    return Array.from(results).sort((a, b) => a.length - b.length || a.localeCompare(b));
+const rounds = JSON.parse(fs.readFileSync(roundsPath, 'utf8'));
+let commonWords = new Set();
+if (fs.existsSync(commonWordsPath)) {
+    const content = fs.readFileSync(commonWordsPath, 'utf8');
+    content.split(/\r?\n/).forEach(word => {
+        if (word.trim()) commonWords.add(word.trim().toLowerCase());
+    });
+} else {
+    console.warn('Common words file not found');
 }
 
-data.wordPool.forEach(entry => {
-    const isMissing = !entry.subWords || entry.subWords.length === 0;
-    if (isMissing) {
-        missingBefore++;
-        const generated = getSubWords(entry.bingo);
-        entry.subWords = generated;
-        entry.sub = generated.length;
-        filledNow++;
-        if (filledBingos.length < 10) {
-            filledBingos.push(entry.bingo);
+const coreBingos = [
+    'PLANET','GARDEN','FLOWER','BRIGHT','STREAK','BASKET','STRONG','MANTEL',
+    'SQUARE','DANGER','TRAVEL','ROCKET','BRIDGE','WINDOW','SUMMER','WINTER',
+    'ORANGE','SILVER','GUITAR','SPRING','ACTION','DREAMS','PHONES','CLOUDS',
+    'QUARTZ','WIZARD','ZENITH','NATURE'
+];
+
+const curatedKeepSet = new Set();
+rounds.wordPool.forEach(item => {
+    if (coreBingos.includes(item.bingo.toUpperCase())) {
+        const sub = item.subWords || item.sub;
+        if (Array.isArray(sub)) {
+            sub.forEach(w => curatedKeepSet.add(w.toUpperCase()));
         }
     }
 });
 
-fs.writeFileSync(roundsPath, JSON.stringify(data, null, 2));
+console.log(`Curated keep set size: ${curatedKeepSet.size}`);
 
-console.log(`Total wordPool entries: ${data.wordPool.length}`);
-console.log(`Missing before: ${missingBefore}`);
-console.log(`Filled now: ${filledNow}`);
-console.log(`First 10 filled bingo words: ${filledBingos.join(", ")}`);
+let entriesChanged = 0;
+let totalRemovedCount = 0;
+let removedWords = [];
+
+rounds.wordPool.forEach(item => {
+    const bingo = item.bingo.toUpperCase();
+    const originalSub = Array.isArray(item.subWords) ? item.subWords : (Array.isArray(item.sub) ? item.sub : []);
+    
+    let normalized = originalSub
+        .map(w => w.toUpperCase().replace(/[^A-Z]/g, ''))
+        .filter(w => w.length >= 3 && w.length <= 6 && w !== bingo);
+    
+    normalized = [...new Set(normalized)];
+
+    const filtered = normalized.filter(w => {
+        return commonWords.has(w.toLowerCase()) || curatedKeepSet.has(w.toUpperCase());
+    });
+
+    const sortFn = (a, b) => {
+        if (a.length !== b.length) return a.length - b.length;
+        return a.localeCompare(b);
+    };
+
+    let finalWords;
+    if (filtered.length < 5) {
+        finalWords = normalized.sort(sortFn).slice(0, 5);
+    } else {
+        finalWords = filtered.sort(sortFn);
+    }
+
+    const currentSubWords = item.subWords || [];
+    if (JSON.stringify(currentSubWords) !== JSON.stringify(finalWords)) {
+        entriesChanged++;
+    }
+
+    const finalSet = new Set(finalWords);
+    normalized.forEach(w => {
+        if (!finalSet.has(w)) {
+          totalRemovedCount++;
+          if (removedWords.length < 20) {
+              removedWords.push(w);
+          }
+        }
+    });
+
+    item.subWords = finalWords;
+    item.sub = finalWords.length;
+});
+
+fs.writeFileSync(roundsPath, JSON.stringify(rounds, null, 2));
+
+console.log(`entries changed: ${entriesChanged}`);
+console.log(`total removed: ${totalRemovedCount}`);
+console.log(`first 20 removed words: ${removedWords.slice(0, 20).join(', ')}`);
