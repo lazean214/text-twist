@@ -19,12 +19,12 @@
   border-left: 8px solid #3d2b1f;
   border-right: 8px solid #3d2b1f;
   color: var(--ink);
-  font-family: 'Crimson Pro', serif;
+  font-family: 'Crimson Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, serif;
   overflow: hidden;
 }
 
 .medieval-font {
-  font-family: 'MedievalSharp', cursive;
+  font-family: 'MedievalSharp', Impact, 'Arial Narrow Bold', sans-serif, cursive;
 }
 
 .ww-hud {
@@ -321,20 +321,79 @@
   .wordworm-container {
     border: none;
     max-width: 100vw;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
   
+  .ww-hud {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .ww-label-row {
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+
+  .ww-hp-text {
+    font-size: 0.7rem;
+  }
+
+  .ww-stage-info {
+    font-size: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .ww-battle-scene {
+    padding: 0 1rem;
+  }
+
   .ww-sprite {
-    width: 6rem;
-    height: 6rem;
+    width: 5rem;
+    height: 5rem;
+    font-size: 2.5rem;
+  }
+
+  .ww-sprite.enemy {
     font-size: 3rem;
   }
   
+  .ww-word-area {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .ww-word-display {
+    height: 2.5rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
   .ww-grid {
-    gap: 0.5rem;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
   }
   
   .ww-tile {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     border-width: 2px;
+    box-shadow: 0 2px 0 #3d2b1f;
+  }
+
+  .ww-btn {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .ww-btn-attack {
+    font-size: 1rem;
+  }
+
+  .ww-footer {
+    padding: 0.5rem;
+  }
+
+  .ww-exit-btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
   }
 }

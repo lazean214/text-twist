@@ -966,7 +966,7 @@ function App() {
 
             <input
               id="player-name"
-              className="name-input"
+              className="name-input text-base"
               value={newPlayerName}
               onChange={(event) => {
                 setNewPlayerName(event.target.value)
