@@ -29,6 +29,8 @@ import type {
 } from './types/player'
 import './App.css'
 
+import HangmanGame from './components/HangmanGame'
+
 type Difficulty = 'simple' | 'hard' | 'hardest'
 
 type Round = {
@@ -273,7 +275,9 @@ type AppView =
   | 'new-game'
   | 'continue'
   | 'leaderboard'
-  | 'game'
+  | 'game-select'
+  | 'text-twist'
+  | 'hangman'
 
 function App() {
   const [view, setView] = useState<AppView>('splash')
@@ -411,7 +415,7 @@ function App() {
       setModalBody('')
       setModalButton('CONTINUE')
       setModalTitle('')
-      setView('game')
+      setView('game-select')
       lastSavedSnapshot.current = ''
     },
     [getRandomRound],
@@ -508,7 +512,7 @@ function App() {
   ])
 
   useEffect(() => {
-    if (!activeProfile || view !== 'game') {
+    if (!activeProfile || view !== 'text-twist') {
       return
     }
 
@@ -695,50 +699,7 @@ function App() {
     timeLeft,
   ])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (modalOpen || isRoundOver) {
-        return
-      }
-
-      const key = event.key.toUpperCase()
-
-      if (key === 'ENTER') {
-        submitWord()
-        return
-      }
-
-      if (key === 'BACKSPACE' || key === 'DELETE') {
-        event.preventDefault()
-        setCurrentGuess((prev) => prev.slice(0, -1))
-        return
-      }
-
-      if (key === ' ') {
-        event.preventDefault()
-        twistLetters()
-        return
-      }
-
-      if (/^[A-Z]$/.test(key)) {
-        addLetter(key)
-      }
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [
-    addLetter,
-    isRoundOver,
-    modalOpen,
-    submitWord,
-    twistLetters,
-  ])
-
-  const onModalContinue = () => {
+  const onModalContinue = useCallback(() => {
     setModalOpen(false)
 
     if (modalAction === 'next') {
@@ -769,7 +730,12 @@ function App() {
 
       startRound()
     }
-  }
+  }, [
+    currentLevel,
+    getRandomRound,
+    modalAction,
+    startRound,
+  ])
 
   const onStartNewGame = () => {
     setNewPlayerName('')
@@ -823,12 +789,6 @@ function App() {
     hydrateFromProfile(profile)
   }
 
-  const onGoToSplash = () => {
-    refreshProfiles()
-    setView('splash')
-    setModalOpen(false)
-  }
-
   const onOpenLeaderboard = () => {
     refreshProfiles()
     setView('leaderboard')
@@ -867,6 +827,79 @@ function App() {
           .padStart(2, '0')}:${(bestTimeRaceSeconds % 60)
           .toString()
           .padStart(2, '0')}`
+
+  useEffect(() => {
+    if (view !== 'text-twist') return
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toUpperCase()
+
+      if (modalOpen) {
+        if (key === 'ENTER' || key === ' ') {
+          event.preventDefault()
+          onModalContinue()
+        }
+        return
+      }
+
+      if (key === 'ENTER') {
+        if (currentGuess.length > 0) {
+          submitWord()
+        } else if (bingoFound || isRoundOver) {
+          endRound()
+        }
+        return
+      }
+
+      if (key === ' ') {
+        event.preventDefault()
+        if (currentGuess.length === 0 && (bingoFound || isRoundOver)) {
+          endRound()
+        } else {
+          twistLetters()
+        }
+        return
+      }
+
+      if (isRoundOver) {
+        return
+      }
+
+      if (key === 'ESCAPE') {
+        event.preventDefault()
+        clearGuess()
+        return
+      }
+
+      if (key === 'BACKSPACE' || key === 'DELETE') {
+        event.preventDefault()
+        setCurrentGuess((prev) => prev.slice(0, -1))
+        return
+      }
+
+      if (/^[A-Z]$/.test(key)) {
+        addLetter(key)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [
+    addLetter,
+    bingoFound,
+    clearGuess,
+    currentGuess,
+    endRound,
+    isRoundOver,
+    modalOpen,
+    onModalContinue,
+    submitWord,
+    twistLetters,
+    view,
+  ])
 
   if (view === 'splash') {
     return (
@@ -988,6 +1021,60 @@ function App() {
     )
   }
 
+  if (view === 'game-select') {
+    return (
+      <div className="game-page">
+        <main className="menu-shell">
+          <section className="menu-card">
+            <p className="menu-kicker">Welcome, {activeProfile?.name}</p>
+            <h1>Select Game</h1>
+            <p>Choose your challenge mode</p>
+
+            <div className="menu-actions">
+              <button
+                className="menu-btn menu-btn-primary"
+                type="button"
+                onClick={() => setView('text-twist')}
+              >
+                Text Twist 100
+              </button>
+              <button
+                className="menu-btn"
+                type="button"
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  borderColor: 'transparent',
+                  color: '#ffffff'
+                }}
+                onClick={() => setView('hangman')}
+              >
+                Hangman Pro
+              </button>
+              <button
+                className="menu-btn menu-btn-ghost"
+                type="button"
+                onClick={() => setView('splash')}
+              >
+                Logout
+              </button>
+            </div>
+          </section>
+        </main>
+      </div>
+    )
+  }
+
+  if (view === 'hangman') {
+    return (
+      <div className="game-page">
+        <HangmanGame 
+          playerName={activeProfile?.name || 'Guest'} 
+          onExit={() => setView('game-select')} 
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="game-page">
       <main className="game-shell">
@@ -1049,9 +1136,9 @@ function App() {
             <button
               type="button"
               className="small-btn"
-              onClick={onGoToSplash}
+              onClick={() => setView('game-select')}
             >
-              Save & Exit
+              Games
             </button>
           </div>
         </header>

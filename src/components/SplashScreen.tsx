@@ -23,6 +23,7 @@ function SplashScreen({
       document.body.classList.remove("splash-active")
     }
   }, [])
+
   return (
     <main className="menu-shell">
       <section className="menu-card">
