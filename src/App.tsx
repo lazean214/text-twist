@@ -11,6 +11,7 @@ import PlayerPicker from './components/PlayerPicker'
 import SplashScreen from './components/SplashScreen'
 import roundsData from './data/rounds.json'
 import dictionaryRaw from '../google-10000-english.txt?raw'
+import words300Raw from '../englishword300.md?raw'
 import {
   createProfile,
   findProfileByName,
@@ -30,6 +31,7 @@ import type {
 import './App.css'
 
 import HangmanGame from './components/HangmanGame'
+import WordwormGame from './components/WordwormGame'
 
 type Difficulty = 'simple' | 'hard' | 'hardest'
 
@@ -269,6 +271,11 @@ const SIMPLE_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'simple')
 const HARD_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'hard')
 const HARDEST_ROUNDS = ROUNDS.filter((r) => r.difficulty === 'hardest')
 
+const DICTIONARY_SET = new Set([
+  ...dictionaryRaw.split(/\r?\n/),
+  ...words300Raw.split(/\r?\n/)
+].map(word => word.trim().toUpperCase()).filter(word => /^[A-Z]{3,}$/.test(word)))
+
 type ModalAction = 'next' | 'retry' | 'restart' | null
 type AppView =
   | 'splash'
@@ -278,6 +285,7 @@ type AppView =
   | 'game-select'
   | 'text-twist'
   | 'hangman'
+  | 'wordworm'
 
 function App() {
   const [view, setView] = useState<AppView>('splash')
@@ -1051,6 +1059,18 @@ function App() {
                 Hangman Pro
               </button>
               <button
+                className="menu-btn"
+                type="button"
+                style={{
+                  background: 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
+                  borderColor: 'transparent',
+                  color: '#ffffff'
+                }}
+                onClick={() => setView('wordworm')}
+              >
+                Wordworm Quest
+              </button>
+              <button
                 className="menu-btn menu-btn-ghost"
                 type="button"
                 onClick={() => setView('splash')}
@@ -1069,6 +1089,18 @@ function App() {
       <div className="game-page">
         <HangmanGame 
           playerName={activeProfile?.name || 'Guest'} 
+          onExit={() => setView('game-select')} 
+        />
+      </div>
+    )
+  }
+
+  if (view === 'wordworm') {
+    return (
+      <div className="game-page">
+        <WordwormGame 
+          playerName={activeProfile?.name || 'Guest'} 
+          dictionary={DICTIONARY_SET}
           onExit={() => setView('game-select')} 
         />
       </div>

@@ -1,0 +1,340 @@
+:root {
+  --parchment: #f4e4bc;
+  --ink: #2c1e11;
+  --gold: #d4af37;
+  --lex-green: #4ade80;
+  --enemy-red: #f87171;
+}
+
+.wordworm-container {
+  max-width: 1000px;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  background: url('https://www.transparenttextures.com/patterns/parchment.png'), var(--parchment);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  position: relative;
+  border-left: 8px solid #3d2b1f;
+  border-right: 8px solid #3d2b1f;
+  color: var(--ink);
+  font-family: 'Crimson Pro', serif;
+  overflow: hidden;
+}
+
+.medieval-font {
+  font-family: 'MedievalSharp', cursive;
+}
+
+.ww-hud {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ww-hud-section {
+  flex: 1;
+}
+
+.ww-hud-section.right {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.ww-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ww-level-badge {
+  font-size: 0.75rem;
+  background: #b45309;
+  color: white;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+}
+
+.ww-health-bar {
+  height: 20px;
+  background: #3d2b1f;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid #000;
+  width: 100%;
+  max-width: 200px;
+}
+
+.ww-health-fill {
+  height: 100%;
+  transition: width 0.5s ease-out;
+}
+
+.ww-health-fill.player { background: var(--lex-green); }
+.ww-health-fill.enemy { background: var(--enemy-red); }
+
+.ww-hp-text {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.ww-stage-info {
+  text-align: center;
+  padding: 0.5rem 0;
+  background: rgba(0, 0, 0, 0.1);
+  font-style: italic;
+}
+
+.ww-battle-scene {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  position: relative;
+}
+
+.ww-sprite {
+  width: 8rem;
+  height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+}
+
+.ww-sprite.player { font-size: 4rem; }
+.ww-sprite.enemy { font-size: 4.5rem; }
+
+.floating {
+  animation: ww-float 3s ease-in-out infinite;
+}
+
+@keyframes ww-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.shaking {
+  animation: ww-shake 0.2s ease-in-out 3;
+}
+
+@keyframes ww-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.ww-damage-popup {
+  position: absolute;
+  color: #ef4444;
+  font-weight: bold;
+  font-size: 2rem;
+  pointer-events: none;
+  animation: ww-fadeUp 1s forwards;
+  z-index: 100;
+}
+
+@keyframes ww-fadeUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-50px); }
+}
+
+.ww-word-area {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.05);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ww-word-display {
+  height: 3rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px dashed #9ca3af;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.875rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  color: #9ca3af;
+}
+
+.ww-word-display.active {
+  color: var(--ink);
+}
+
+.ww-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ww-tile {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: bold;
+  background: #fff;
+  border: 3px solid #3d2b1f;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  box-shadow: 0 4px 0 #3d2b1f;
+}
+
+.ww-tile:hover:not(.selected) {
+  transform: translateY(-2px);
+  background: #fdf6e3;
+}
+
+.ww-tile:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #3d2b1f;
+}
+
+.ww-tile.selected {
+  background: var(--gold);
+  color: white;
+  transform: scale(0.95);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+.ww-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ww-btn {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ww-btn-clear {
+  flex: 1;
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.ww-btn-scramble {
+  flex: 1;
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.ww-btn-attack {
+  flex: 2;
+  background: #3d2b1f;
+  color: var(--parchment);
+  border-color: var(--gold);
+  font-size: 1.25rem;
+  text-transform: uppercase;
+}
+
+.ww-btn-attack:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.ww-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+
+.ww-modal-content {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 0.75rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.ww-modal-content h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.ww-modal-content p {
+  margin-bottom: 1.5rem;
+}
+
+.ww-btn-modal {
+  width: 100%;
+  background: #3d2b1f;
+  color: var(--parchment);
+  border: 2px solid var(--gold);
+  padding: 0.75rem;
+  font-weight: bold;
+}
+
+.ww-footer {
+  margin-top: auto;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.ww-exit-btn {
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.6rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ww-exit-btn:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 640px) {
+  .wordworm-container {
+    border: none;
+    max-width: 100vw;
+  }
+  
+  .ww-sprite {
+    width: 6rem;
+    height: 6rem;
+    font-size: 3rem;
+  }
+  
+  .ww-grid {
+    gap: 0.5rem;
+  }
+  
+  .ww-tile {
+    font-size: 1.5rem;
+    border-width: 2px;
+  }
+}
