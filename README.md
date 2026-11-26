@@ -110,3 +110,10 @@ After the first successful load, the app should work offline for core gameplay.
 
 - If a wordPool entry has no sub/subWords, that round may feel incomplete.
 - Keep bingo words and sub-words uppercase-safe alphabetic strings for best compatibility.
+
+
+## Links
+
+- Repository: https://github.com/lazean214/text-twist
+
+No live demo is currently hosted for this project.
